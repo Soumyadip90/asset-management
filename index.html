@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Barcode Generator Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <style>
+        :root {
+            --sidebar-bg: #2f3542;
+            --sidebar-nav-active: #3a414e;
+            --sidebar-text: #8e9bb0;
+            --sidebar-header: #242933;
+            --body-bg: #ebedef;
+            --header-bg: #ffffff;
+            --blue-card: #321fdb;
+            --cyan-card: #39f;
+            --yellow-card: #f9b115;
+            --red-card: #e55353;
+            --primary: #321fdb;
+            --success: #2eb85c;
+            --info: #39f;
+            --warning: #f9b115;
+            --danger: #e55353;
+            --text-dark: #3c4b64;
+            --border-color: #d8dbe0;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Public Sans', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 256px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
+            z-index: 1000;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed .sidebar-brand span,
+        .sidebar.collapsed .nav-link-text,
+        .sidebar.collapsed .nav-title,
+        .sidebar.collapsed .nav-badge { display: none; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 0.8rem 0; }
+        .sidebar.collapsed .nav-icon { margin-right: 0; }
+
+        .sidebar-brand {
+            height: 56px;
+            background-color: var(--sidebar-header);
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            gap: 10px;
+        }
+        .sidebar-brand-icon {
+            width: 28px;
+            height: 28px;
+            background: #321fdb;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+            color: #fff;
+        }
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .nav-title {
+            padding: 1rem 1.25rem 0.5rem;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #636f83;
+            letter-spacing: 0.5px;
+        }
+        .nav-item { width: 100%; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1.25rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover {
+            color: #ffffff;
+            background-color: var(--sidebar-nav-active);
+        }
+        .nav-link.active {
+            color: #ffffff;
+            background-color: var(--sidebar-nav-active);
+            border-left-color: #321fdb;
+        }
+        .nav-icon { margin-right: 14px; font-size: 16px; width: 20px; text-align: center; }
+        .nav-badge {
+            margin-left: auto;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 4px;
+            background: #321fdb;
+            color: #fff;
+        }
+        .nav-badge.badge-warning { background: #f9b115; color: #222; }
+
+        .wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header {
+            height: 56px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            gap: 15px;
+        }
+        .header-left { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+
+        .global-search-container {
+            flex: 1;
+            max-width: 460px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .global-search-input {
+            width: 100%;
+            height: 36px;
+            padding: 6px 36px 6px 34px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: #f8fafc;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .global-search-input:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(50, 31, 219, 0.12);
+        }
+        .search-icon-inside {
+            position: absolute;
+            left: 12px;
+            font-size: 14px;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            color: #94a3b8;
+            cursor: pointer;
+            display: none;
+        }
+        .search-clear-btn:hover { color: var(--danger); }
+
+        .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #321fdb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            font-size: 13px;
+            box-shadow: 0 0 0 1px #d8dbe0;
+        }
+
+        .subheader {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 1.5rem;
+            font-size: 13px;
+            color: #768192;
+        }
+        .subheader span { color: #3c4b64; font-weight: 600; }
+
+        .content { padding: 1.5rem; }
+
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .widget-card {
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 1.25rem 1.25rem 0.5rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 155px;
+        }
+        .bg-blue { background: linear-gradient(135deg, #321fdb, #1f1498); }
+        .bg-cyan { background: linear-gradient(135deg, #39f, #1b82e2); }
+        .bg-yellow { background: linear-gradient(135deg, #f9b115, #d29107); }
+        .bg-red { background: linear-gradient(135deg, #e55353, #c93b3b); }
+
+        .widget-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .widget-stat { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+        .widget-title { font-size: 13.5px; opacity: 0.9; margin-top: 4px; font-weight: 500; }
+        .widget-chart-svg { width: 100%; height: 55px; margin-top: 10px; }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .card-header {
+            padding: 0.85rem 1.25rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .card-header h3 { margin: 0; font-size: 15px; font-weight: 700; color: #3c4b64; }
+        .card-body { padding: 1.25rem; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 15px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 12.5px; font-weight: 600; color: #4f5d73; margin-bottom: 5px; }
+        .form-control {
+            font-family: inherit;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13.5px;
+            color: #3c4b64;
+            background: #fff;
+            outline: none;
+        }
+        .form-control:focus {
+            border-color: #321fdb;
+            box-shadow: 0 0 0 2px rgba(50, 31, 219, 0.15);
+        }
+
+        .btn {
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+        }
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+        .btn-primary { background: #321fdb; color: #fff; }
+        .btn-primary:hover { background: #2819af; }
+        .btn-outline { background: #fff; border-color: var(--border-color); color: #4f5d73; }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-success { background: #2eb85c; color: #fff; }
+        .btn-success:hover { background: #269a4d; }
+        .btn-warning { background: #f9b115; color: #212529; }
+        .btn-danger { background: #e55353; color: #fff; }
+        .btn-danger:hover { background: #c93b3b; }
+        .btn-sm { padding: 4px 8px; font-size: 12px; border-radius: 3px; }
+        .btn-block { width: 100%; grid-column: 1 / -1; padding: 10px; margin-top: 10px; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #f0f2f5;
+            color: #636f83;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tbody tr:hover { background-color: #f9fafb; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-success { background: #d3f9d8; color: #2b8a3e; }
+        .badge-warning { background: #fff3bf; color: #d9480f; }
+        .badge-info { background: #d0ebff; color: #1864ab; }
+        .badge-danger { background: #ffe3e3; color: #c92a2a; }
+
+        .product-img {
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #d8dbe0;
+            cursor: zoom-in;
+            transition: transform 0.15s;
+        }
+        .product-img:hover { transform: scale(1.1); }
+        .preview-box {
+            width: 50px;
+            height: 50px;
+            margin-top: 8px;
+            border: 1px dashed #b1b7c1;
+            border-radius: 4px;
+            display: none;
+            object-fit: cover;
+            cursor: zoom-in;
+        }
+
+        .image-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.88);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(4px);
+        }
+        .zoom-toolbar {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.85);
+            padding: 6px 14px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 100000;
+        }
+        .zoom-toolbar button {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+        .zoom-level-text { color: #e2e8f0; font-size: 13px; font-weight: 600; min-width: 50px; text-align: center; }
+        .image-viewport {
+            width: 94vw;
+            height: 84vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .image-viewport img {
+            position: absolute;
+            border-radius: 4px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .image-modal-close {
+            position: absolute;
+            top: 20px; right: 30px;
+            color: #ffffff;
+            font-size: 36px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 100000;
+        }
+
+        .repair-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(47, 53, 66, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            backdrop-filter: blur(2px);
+        }
+        .repair-modal-content {
+            background: #fff;
+            padding: 24px;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 580px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .category-chip {
+            background: #ebedef;
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .highlight-field {
+            border-color: #321fdb !important;
+            box-shadow: 0 0 0 4px rgba(50, 31, 219, 0.45) !important;
+            background-color: #f0f3ff !important;
+        }
+    </style>
+</head>
+<body>
+
+<!-- COREUI SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <img src="images (1).jpg" alt="Logo" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px;">
+        <span>Asset Management</span>
+    </div>
+    <ul class="sidebar-nav">
+        <li class="nav-item">
+            <a class="nav-link active" onclick="switchNav('panel-dashboard', this)">
+                <span class="nav-icon">📊</span>
+                <span class="nav-link-text">Dashboard</span>
+                <span class="nav-badge">NEW</span>
+            </a>
+        </li>
+        <li class="nav-title">Inventory Controls</li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-inventory', this)">
+                <span class="nav-icon">📦</span>
+                <span class="nav-link-text">Asset Inventory</span>
+                <span class="nav-badge" id="badgeInventory">0</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-branch-assets', this)">
+                <span class="nav-icon">🏢</span>
+                <span class="nav-link-text">Branch Asset Detail</span>
+                <span class="nav-badge" style="background:#2eb85c;" id="badgeBranchAssets">0</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-specs', this)">
+                <span class="nav-icon">📑</span>
+                <span class="nav-link-text">Specs & Repairs</span>
+                <span class="nav-badge badge-warning" id="badgeSpecs">0</span>
+            </a>
+        </li>
+        <li class="nav-title">Asset Actions</li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-register', this)">
+                <span class="nav-icon">➕</span>
+                <span class="nav-link-text">Register Asset</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-assign', this)">
+                <span class="nav-icon">👤</span>
+                <span class="nav-link-text">Asset Assigning</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" onclick="switchNav('panel-categories', this)">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-link-text">Categories / Branches</span>
+                <span class="nav-badge" id="badgeCategories">0</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- MAIN WRAPPER -->
+<div class="wrapper">
+    <header class="header">
+        <div class="header-left">
+            <span style="font-size: 20px; cursor: pointer; color: #4f5d73;" onclick="toggleSidebar()" title="Toggle Sidebar">☰</span>
+        </div>
+
+        <div class="global-search-container">
+            <span class="search-icon-inside">🔍</span>
+            <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search anything (Asset, Tag, S/N, Assignee)..." oninput="handleGlobalSearch(this.value)">
+            <button type="button" id="globalSearchClear" class="search-clear-btn" onclick="clearGlobalSearch()">✕</button>
+        </div>
+
+        <div class="header-right">
+            <button class="btn btn-outline btn-sm" onclick="exportDataBackup()" title="Download Backup">💾 Backup</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()" title="Restore Backup">📥 Restore</button>
+            <input type="file" id="importFileInput" style="display:none;" accept=".json" onchange="importDataBackup(event)">
+            <button class="btn btn-outline btn-sm" onclick="clearStorageData()" style="color: var(--danger); border-color: var(--danger);">🗑️ Reset</button>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Sign Out</button>
+            <img src="images (1).jpg" class="avatar" alt="Admin" style="object-fit: cover;">
+        </div>
+    </header>
+
+    <div class="subheader">
+        Home / <span id="currentBreadcrumb">Dashboard</span>
+    </div>
+
+    <div class="content">
+
+        <!-- METRIC WIDGETS -->
+        <div class="widget-grid">
+            <div class="widget-card bg-blue">
+                <div class="widget-top">
+                    <div>
+                        <div class="widget-stat" id="statTotalAssets">0</div>
+                        <div class="widget-title">Registered Assets</div>
+                    </div>
+                </div>
+                <svg class="widget-chart-svg" viewBox="0 0 100 25" preserveAspectRatio="none">
+                    <path d="M0,20 Q15,5 30,18 T60,8 T100,15" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+                </svg>
+            </div>
+
+            <div class="widget-card bg-cyan">
+                <div class="widget-top">
+                    <div>
+                        <div class="widget-stat" id="statAssigned">0</div>
+                        <div class="widget-title">Active In-Custody</div>
+                    </div>
+                </div>
+                <svg class="widget-chart-svg" viewBox="0 0 100 25" preserveAspectRatio="none">
+                    <path d="M0,15 Q25,2 50,20 T100,6" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+                </svg>
+            </div>
+
+            <div class="widget-card bg-yellow">
+                <div class="widget-top">
+                    <div>
+                        <div class="widget-stat" id="statInStock">0</div>
+                        <div class="widget-title">Available in Stock</div>
+                    </div>
+                </div>
+                <svg class="widget-chart-svg" viewBox="0 0 100 25" preserveAspectRatio="none">
+                    <path d="M0,10 C20,10 40,22 60,20 C80,18 90,22 100,24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>
+                </svg>
+            </div>
+
+            <div class="widget-card bg-red">
+                <div class="widget-top">
+                    <div>
+                        <div class="widget-stat" id="statRepairs">₹0</div>
+                        <div class="widget-title">Total Repair Outflow</div>
+                    </div>
+                </div>
+                <svg class="widget-chart-svg" viewBox="0 0 100 25" preserveAspectRatio="none">
+                    <rect x="10" y="5" width="6" height="20" fill="rgba(255,255,255,0.6)" />
+                    <rect x="30" y="8" width="6" height="17" fill="rgba(255,255,255,0.6)" />
+                    <rect x="50" y="2" width="6" height="23" fill="rgba(255,255,255,0.6)" />
+                    <rect x="70" y="10" width="6" height="15" fill="rgba(255,255,255,0.6)" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- 1. DASHBOARD -->
+        <div id="panel-dashboard" class="tab-panel active">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Equipment Overview</h3>
+                    <div style="display:flex; gap: 8px; align-items:center; flex-wrap: wrap;">
+                        <select id="dashboardStatusFilter" class="form-control" style="font-size: 13px; height: 32px;" onchange="renderTables()">
+                            <option value="ALL">All Records</option>
+                            <option value="ACTIVE">Active Custody</option>
+                            <option value="INSTOCK">In Stock</option>
+                        </select>
+                        <button class="btn btn-outline btn-sm" onclick="switchNav('panel-register', document.querySelectorAll('.sidebar .nav-link')[4])">➕ Add New</button>
+                        <button class="btn btn-primary btn-sm" onclick="printSpecsSection()">🖨️ Export PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Asset Image</th>
+                                    <th>Product</th>
+                                    <th>Tag ID</th>
+                                    <th>Serial</th>
+                                    <th>Vendor</th>
+                                    <th>Warranty Ends</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardQuickTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. ASSET ASSIGNING INVENTORY -->
+        <div id="panel-inventory" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Asset Assigning Inventory</h3>
+                    <div style="display:flex; gap: 10px; align-items:center; flex-wrap: wrap;">
+                        <!-- <select id="inventoryStatusFilter" class="form-control" style="font-size: 13px; height: 32px;" onchange="renderTables()">
+                            <option value="ALL">All Records</option>
+                            <option value="ACTIVE">Active Custody</option>
+                            <option value="INSTOCK">In Stock</option>
+                        </select> -->
+                        <select id="printListSelect" class="form-control" style="font-size: 13px; height: 32px;" onchange="renderTables()"></select>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="printSelectedList()">🖨️ Print Inventory</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Preview</th>
+                                    <th>Product Details</th>
+                                    <th>Custody Assignee</th>
+                                    <th>Issue Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assetTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.5 BRANCH ASSET DETAIL PANEL -->
+        <div id="panel-branch-assets" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <h3 style="margin: 0;">Branch Asset Detail</h3>
+                        <span class="badge badge-info" id="branchAssetCountBadge">0 Total Assets</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <label for="sideNavBranchDropdown" style="font-size: 13px; font-weight: 600; color: #4f5d73;">Select Branch:</label>
+                        <select id="sideNavBranchDropdown" class="form-control" style="font-size: 13px; height: 34px; min-width: 200px; border-color: var(--primary);" onchange="onBranchDropdownChange(this.value)"></select>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="printBranchAssetDetailSection()">🖨️ Print Branch Report</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Preview</th>
+                                    <th>Product Details</th>
+                                    <th>Tag ID</th>
+                                    <th>Serial No.</th>
+                                    <th>Branch / Unit</th>
+                                    <th>Supplier</th>
+                                    <th>Purchase</th>
+                                    <th>Warranty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="branchAssetsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SPECS & REPAIRS -->
+        <div id="panel-specs" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Technical Specifications & Repair Maintenance</h3>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="printSpecsSection()">🖨️ Print Specs Ledger</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Img 1</th>
+                                    <th>Img 2</th>
+                                    <th>Asset Name</th>
+                                    <th>Tag ID</th>
+                                    <th>Serial No.</th>
+                                    <th>Supplier</th>
+                                    <th>Procured</th>
+                                    <th>Warranty</th>
+                                    <th>Service Logs</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="specsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. REGISTER ASSET PANEL -->
+        <div id="panel-register" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3 id="formTitle">Register Asset</h3>
+                </div>
+                <div class="card-body">
+                    <form id="assetForm">
+                        <input type="hidden" id="assetId">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Product Name</label>
+                                <input type="text" id="productName" class="form-control" placeholder="MacBook Pro M3 Max" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Asset Tag (Unique ID)</label>
+                                <input type="text" id="tagName" class="form-control" placeholder="AST-2026-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Serial Number (S/N)</label>
+                                <input type="text" id="serialNumber" class="form-control" placeholder="C02G1234MD6R">
+                            </div>
+                            <div class="form-group">
+                                <label>Vendor / Supplier</label>
+                                <input type="text" id="vendor" class="form-control" placeholder="Apple Enterprise Corp" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Purchase Date</label>
+                                <input type="date" id="buyDate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Warranty Expiry</label>
+                                <input type="date" id="warrantyDate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Primary Asset Image</label>
+                                <input type="file" id="productImage" class="form-control" accept="image/*">
+                                <input type="hidden" id="imageBase64">
+                                <img id="formPreview1" class="preview-box" alt="Preview 1" title="Click to zoom">
+                            </div>
+                            <div class="form-group">
+                                <label>Secondary Asset Image</label>
+                                <input type="file" id="productImage2" class="form-control" accept="image/*">
+                                <input type="hidden" id="imageBase64_2">
+                                <img id="formPreview2" class="preview-box" alt="Preview 2" title="Click to zoom">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Save Asset To System</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. ASSET ASSIGNING PANEL -->
+        <div id="panel-assign" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Asset Assigning</h3>
+                </div>
+                <div class="card-body">
+                    <form id="assignAssetForm">
+                        <div class="form-grid">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Select Registered Asset</label>
+                                <select id="assignAssetSelect" class="form-control" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Branch / Category</label>
+                                <select id="assignBranchList" class="form-control"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Assignee Name</label>
+                                <input type="text" id="assignAssigneeName" class="form-control" placeholder="Employee Name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Issue</label>
+                                <input type="date" id="assignIssueDate" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-block">Confirm Assignment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. CATEGORIES / BRANCHES PANEL -->
+        <div id="panel-categories" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Manage Categories / Branches</h3>
+                </div>
+                <div class="card-body">
+                    <form id="listForm" style="display: flex; gap: 10px; max-width: 600px; margin-bottom: 20px;">
+                        <input type="text" id="newListName" class="form-control" placeholder="Name (e.g. IT, Sales, Head Office)..." required>
+                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0;">Add</button>
+                    </form>
+                    <div id="existingListsContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- HIGH-RESOLUTION PAN & ZOOM LIGHTBOX MODAL -->
+<div id="imageModal" class="image-modal-overlay">
+    <div class="zoom-toolbar">
+        <button type="button" onclick="zoomIn()" title="Zoom In (+)">➕</button>
+        <button type="button" onclick="zoomOut()" title="Zoom Out (-)">➖</button>
+        <span id="zoomLevelIndicator" class="zoom-level-text">100%</span>
+        <button type="button" onclick="resetZoom()" title="Reset to Fit (100%)">⟲</button>
+    </div>
+    <span class="image-modal-close" onclick="closeImageZoom()" title="Close (Esc)">&times;</span>
+    <div class="image-viewport" id="imageViewport">
+        <img id="zoomedImage" src="" alt="Enlarged Document">
+    </div>
+</div>
+
+<!-- Repair Management Modal -->
+<div id="repairModal" class="repair-modal-overlay">
+    <div class="repair-modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+            <h3 id="repairModalTitle" style="margin: 0; font-size: 16px;">Log Equipment Repair</h3>
+            <span onclick="closeRepairModal()" style="font-size: 24px; cursor: pointer; color: #636f83;">&times;</span>
+        </div>
+        <form id="repairForm">
+            <input type="hidden" id="repairAssetId">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Date of Service</label>
+                <input type="date" id="repairDate" class="form-control" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Repair Cost (₹)</label>
+                <input type="number" step="0.01" id="repairCost" class="form-control" placeholder="0.00" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Issue Description / Replaced Parts</label>
+                <textarea id="repairDesc" rows="3" class="form-control" placeholder="Diagnostic breakdown..." required></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label>Attach Invoice / Bill Copy</label>
+                <input type="file" id="repairBillFile" class="form-control" accept="image/*">
+                <input type="hidden" id="repairBillBase64">
+                <img id="repairBillPreview" class="preview-box" alt="Bill Preview" title="Click to zoom">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-success" style="flex: 1;">Save Service Entry</button>
+                <button type="button" onclick="closeRepairModal()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+            </div>
+        </form>
+        <hr style="margin: 20px 0 14px 0; border: none; border-top: 1px solid var(--border-color);">
+        <h4 style="font-size: 13px; margin: 0 0 10px 0; color: #4f5d73;">Past Maintenance Records</h4>
+        <div id="repairHistoryList" style="max-height: 200px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<script>
+    // if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+    //     window.location.href = 'login.html';
+    // }
+
+    // function logout() {
+    //     sessionStorage.removeItem('isLoggedIn');
+    //     window.location.href = 'login.html';
+    // }
+
+    function checkAuth() {
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.replace('login.html');
+        }
+    }
+
+    // Run auth check immediately
+    checkAuth();
+
+    // Prevent Back Button restore from browser back-forward cache (bfcache)
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted || performance.getEntriesByType('navigation')[0].type === 'back_forward') {
+            checkAuth();
+        }
+    });
+
+    // Logout that replaces history entry so back button cannot return here
+    function logout() {
+        sessionStorage.removeItem('isLoggedIn');
+        window.location.replace('login.html');
+    }
+
+    function executeCleanPrint(htmlContent) {
+        let printFrame = document.getElementById('printExecutionFrame');
+        if (printFrame) {
+            printFrame.remove();
+        }
+
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'printExecutionFrame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        document.body.appendChild(printFrame);
+
+        const frameDoc = printFrame.contentWindow || printFrame.contentDocument;
+        const doc = frameDoc.document || frameDoc;
+
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+
+        printFrame.onload = function() {
+            setTimeout(() => {
+                try {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.onafterprint = function() {
+                        printFrame.remove();
+                    };
+                    printFrame.contentWindow.print();
+                } catch (e) {
+                    console.error("Print Error:", e);
+                }
+            }, 300);
+        };
+    }
+
+    // Export Data Backup to JSON file
+    function exportDataBackup() {
+        const backupData = {
+            assets: assets,
+            assignments: assignments,
+            categories: categories
+        };
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `asset_data_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Import Data Backup from JSON file
+    function importDataBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed.assets) assets = parsed.assets;
+                if (parsed.assignments) assignments = parsed.assignments;
+                if (parsed.categories) categories = parsed.categories;
+
+                localStorage.setItem('assets', JSON.stringify(assets));
+                localStorage.setItem('assignments', JSON.stringify(assignments));
+                localStorage.setItem('assetCategories', JSON.stringify(categories));
+
+                renderCategoryDropdowns();
+                renderTables();
+                populateAssignDropdown();
+                renderBranchAssetsDetailTable();
+                alert("Backup restored successfully!");
+            } catch (err) {
+                alert("Invalid backup file format.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function clearStorageData() {
+        if (confirm("Reset local storage and clear all data? Make sure to download a backup first.")) {
+            localStorage.clear();
+            assets = [];
+            assignments = [];
+            categories = [];
+            renderCategoryDropdowns();
+            renderTables();
+            alert("Database reset successfully!");
+        }
+    }
+
+    window.toggleSidebar = function() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.add('collapsed');
+        }
+    });
+
+    let assets = JSON.parse(localStorage.getItem('assets')) || [];
+    let assignments = JSON.parse(localStorage.getItem('assignments')) || [];
+    let categories = JSON.parse(localStorage.getItem('assetCategories')) || [];
+    if (!Array.isArray(categories)) categories = [];
+
+    let currentGlobalQuery = '';
+    let selectedBranchDetail = 'ALL';
+
+    const assetForm = document.getElementById('assetForm');
+    const assignAssetForm = document.getElementById('assignAssetForm');
+    const listForm = document.getElementById('listForm');
+
+    const imageInput = document.getElementById('productImage');
+    const imageBase64 = document.getElementById('imageBase64');
+    const formPreview1 = document.getElementById('formPreview1');
+
+    const imageInput2 = document.getElementById('productImage2');
+    const imageBase64_2 = document.getElementById('imageBase64_2');
+    const formPreview2 = document.getElementById('formPreview2');
+
+    const repairBillFile = document.getElementById('repairBillFile');
+    const repairBillBase64 = document.getElementById('repairBillBase64');
+    const repairBillPreview = document.getElementById('repairBillPreview');
+    
+    const tableBody = document.getElementById('assetTableBody');
+    const branchAssetsTableBody = document.getElementById('branchAssetsTableBody');
+    const specsTableBody = document.getElementById('specsTableBody');
+    const dashboardQuickTable = document.getElementById('dashboardQuickTable');
+    
+    const printListSelect = document.getElementById('printListSelect');
+    const existingListsContainer = document.getElementById('existingListsContainer');
+    const assignAssetSelect = document.getElementById('assignAssetSelect');
+    const assignBranchList = document.getElementById('assignBranchList');
+    const sideNavBranchDropdown = document.getElementById('sideNavBranchDropdown');
+
+    window.handleGlobalSearch = function(query) {
+        currentGlobalQuery = (query || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('globalSearchClear');
+        if (clearBtn) clearBtn.style.display = currentGlobalQuery ? 'block' : 'none';
+        renderTables();
+        renderBranchAssetsDetailTable();
+    };
+
+    window.clearGlobalSearch = function() {
+        const input = document.getElementById('globalSearchInput');
+        if (input) input.value = '';
+        handleGlobalSearch('');
+    };
+
+    function getActiveAssignedTags() {
+        const set = new Set();
+        assignments.forEach(asg => {
+            if (!asg.returnDate || asg.returnDate === '') {
+                set.add(asg.tagId);
+            }
+        });
+        return set;
+    }
+
+    window.switchNav = function(panelId, linkElement) {
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
+
+        const targetPanel = document.getElementById(panelId);
+        if (targetPanel) targetPanel.classList.add('active');
+        if (linkElement && linkElement.classList) linkElement.classList.add('active');
+
+        const titleMap = {
+            'panel-dashboard': 'Dashboard',
+            'panel-inventory': 'Asset Inventory',
+            'panel-branch-assets': 'Branch Asset Detail',
+            'panel-specs': 'Specs & Repairs',
+            'panel-register': 'Register Asset',
+            'panel-assign': 'Asset Assigning',
+            'panel-categories': 'Categories / Branches'
+        };
+        document.getElementById('currentBreadcrumb').innerText = titleMap[panelId] || 'Dashboard';
+
+        if (panelId === 'panel-assign') {
+            populateAssignDropdown();
+        } else if (panelId === 'panel-branch-assets') {
+            renderBranchAssetsDetailTable();
+        }
+    };
+
+    window.onBranchDropdownChange = function(branchVal) {
+        selectedBranchDetail = branchVal;
+        renderBranchAssetsDetailTable();
+    };
+
+    // Zoom Engine
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('zoomedImage');
+    const viewport = document.getElementById('imageViewport');
+    const zoomText = document.getElementById('zoomLevelIndicator');
+
+    let currentScale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    function applyTransform() {
+        modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+        zoomText.innerText = `${Math.round(currentScale * 100)}%`;
+    }
+
+    window.openImageZoom = function(src) {
+        if (!src || src.includes('placeholder')) return;
+        modalImg.src = src;
+        currentScale = 1;
+        translateX = 0;
+        translateY = 0;
+        applyTransform();
+        modal.style.display = 'flex';
+    };
+
+    window.closeImageZoom = function() {
+        modal.style.display = 'none';
+        modalImg.src = '';
+    };
+
+    window.zoomIn = function() {
+        if (currentScale < 5) {
+            currentScale = parseFloat((currentScale + 0.35).toFixed(2));
+            applyTransform();
+        }
+    };
+
+    window.zoomOut = function() {
+        if (currentScale > 0.6) {
+            currentScale = parseFloat((currentScale - 0.35).toFixed(2));
+            applyTransform();
+        }
+    };
+
+    window.resetZoom = function() {
+        currentScale = 1;
+        translateX = 0;
+        translateY = 0;
+        applyTransform();
+    };
+
+    viewport.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        if (e.deltaY < 0) zoomIn();
+        else zoomOut();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', function(e) {
+        if (currentScale <= 1) return;
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+    });
+
+    window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        applyTransform();
+    });
+
+    window.addEventListener('mouseup', function() { isDragging = false; });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeImageZoom();
+            closeRepairModal();
+        }
+    });
+
+    formPreview1.addEventListener('click', () => openImageZoom(formPreview1.src));
+    formPreview2.addEventListener('click', () => openImageZoom(formPreview2.src));
+    repairBillPreview.addEventListener('click', () => openImageZoom(repairBillPreview.src));
+
+    function renderCategoryDropdowns() {
+        let branchHTML = '<option value="Unassigned">-- Select Branch / Category --</option>';
+        let printHTML = '<option value="ALL">All Categories / Branches</option>';
+        let branchDetailOptions = '<option value="ALL">All Branches</option>';
+        let chipsHTML = '';
+        
+        categories.forEach(cat => {
+            branchHTML += `<option value="${cat}">${cat}</option>`;
+            printHTML += `<option value="${cat}">${cat}</option>`;
+            branchDetailOptions += `<option value="${cat}">${cat}</option>`;
+            chipsHTML += `
+                <div class="category-chip">
+                    ${cat}
+                    <span style="cursor:pointer; color: var(--primary); font-weight:bold;" onclick="editCategory('${cat}')">✎</span>
+                    <span style="cursor:pointer; color: var(--danger); font-weight:bold;" onclick="deleteCategory('${cat}')">×</span>
+                </div>
+            `;
+        });
+
+        assignBranchList.innerHTML = branchHTML;
+        const prevPrintVal = printListSelect ? printListSelect.value : 'ALL';
+        printListSelect.innerHTML = printHTML;
+        if (prevPrintVal) printListSelect.value = prevPrintVal;
+
+        if (sideNavBranchDropdown) {
+            sideNavBranchDropdown.innerHTML = branchDetailOptions;
+            sideNavBranchDropdown.value = selectedBranchDetail;
+        }
+
+        existingListsContainer.innerHTML = chipsHTML || '<span style="color:#636f83; font-size: 13px;">No categories configured.</span>';
+        document.getElementById('badgeCategories').innerText = categories.length;
+    }
+
+    listForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newCat = document.getElementById('newListName').value.trim();
+        if (newCat && !categories.includes(newCat)) {
+            categories.push(newCat);
+            localStorage.setItem('assetCategories', JSON.stringify(categories));
+            renderCategoryDropdowns();
+            document.getElementById('newListName').value = '';
+        } else if (categories.includes(newCat)) {
+            alert("Category already exists.");
+        }
+    });
+
+    window.editCategory = function(oldName) {
+        const newName = prompt(`Rename category "${oldName}" to:`, oldName);
+        if (newName && newName.trim() && newName !== oldName) {
+            const trimmedName = newName.trim();
+            if (categories.includes(trimmedName)) {
+                alert("Category with this name already exists.");
+                return;
+            }
+            const index = categories.indexOf(oldName);
+            if (index !== -1) {
+                categories[index] = trimmedName;
+                localStorage.setItem('assetCategories', JSON.stringify(categories));
+            }
+            assignments.forEach(asg => {
+                if (asg.categoryList === oldName) asg.categoryList = trimmedName;
+            });
+            localStorage.setItem('assignments', JSON.stringify(assignments));
+            renderCategoryDropdowns();
+            renderTables();
+            renderBranchAssetsDetailTable();
+        }
+    };
+
+    window.deleteCategory = function(listName) {
+        if (confirm(`Delete category "${listName}"?`)) {
+            categories = categories.filter(c => c !== listName);
+            localStorage.setItem('assetCategories', JSON.stringify(categories));
+            assignments.forEach(asg => {
+                if (asg.categoryList === listName) asg.categoryList = "Unassigned"; 
+            });
+            localStorage.setItem('assignments', JSON.stringify(assignments));
+            renderCategoryDropdowns();
+            renderTables();
+            renderBranchAssetsDetailTable();
+        }
+    };
+
+    function compressImage(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1200; 
+                const scaleSize = Math.min(1, MAX_WIDTH / img.width);
+                canvas.width = Math.round(img.width * scaleSize);
+                canvas.height = Math.round(img.height * scaleSize);
+
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                callback(canvas.toDataURL('image/jpeg', 0.72));
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    imageInput.addEventListener('change', function(e) {
+        if (e.target.files[0]) {
+            compressImage(e.target.files[0], (data) => {
+                imageBase64.value = data;
+                formPreview1.src = data;
+                formPreview1.style.display = 'block';
+            });
+        }
+    });
+
+    imageInput2.addEventListener('change', function(e) {
+        if (e.target.files[0]) {
+            compressImage(e.target.files[0], (data) => {
+                imageBase64_2.value = data;
+                formPreview2.src = data;
+                formPreview2.style.display = 'block';
+            });
+        }
+    });
+
+    repairBillFile.addEventListener('change', function(e) {
+        if (e.target.files[0]) {
+            compressImage(e.target.files[0], (data) => {
+                repairBillBase64.value = data;
+                repairBillPreview.src = data;
+                repairBillPreview.style.display = 'block';
+            });
+        }
+    });
+
+    function populateAssignDropdown(preselectedTag = null) {
+        const activeTags = getActiveAssignedTags();
+        let optionsHTML = '<option value="">-- Choose an Available Asset --</option>';
+        let availableCount = 0;
+
+        assets.forEach(asset => {
+            const isCurrentlyAssigned = activeTags.has(asset.tagName);
+            if (!isCurrentlyAssigned || asset.tagName === preselectedTag) {
+                availableCount++;
+                const isSelected = preselectedTag && asset.tagName === preselectedTag ? 'selected' : '';
+                optionsHTML += `<option value="${asset.tagName}" ${isSelected}>${asset.productName} (Tag: ${asset.tagName})</option>`;
+            }
+        });
+
+        if (availableCount === 0) {
+            optionsHTML = '<option value="">-- No Assets Available (All in Custody) --</option>';
+        }
+
+        assignAssetSelect.innerHTML = optionsHTML;
+    }
+
+    assetForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const assetId = document.getElementById('assetId').value;
+        const tagNameInput = document.getElementById('tagName').value.trim();
+
+        if (!assetId && assets.some(a => a.tagName.toLowerCase() === tagNameInput.toLowerCase())) {
+            alert(`An asset with Tag "${tagNameInput}" is already registered.`);
+            return;
+        }
+
+        const newAsset = {
+            id: assetId ? assetId : Date.now().toString(),
+            productName: document.getElementById('productName').value.trim(),
+            tagName: tagNameInput,
+            serialNumber: document.getElementById('serialNumber').value.trim() || 'N/A', 
+            vendor: document.getElementById('vendor').value.trim(),
+            buyDate: document.getElementById('buyDate').value,
+            warrantyDate: document.getElementById('warrantyDate').value,
+            repairs: [],
+            image: imageBase64.value || 'https://via.placeholder.com/150?text=No+Img1',
+            image2: imageBase64_2.value || 'https://via.placeholder.com/150?text=No+Img2'
+        };
+
+        let tempAssets = [...assets];
+        if (assetId) {
+            const index = tempAssets.findIndex(a => a.id === assetId);
+            newAsset.repairs = tempAssets[index].repairs || [];
+            if (!imageInput.value && !imageBase64.value) newAsset.image = tempAssets[index].image;
+            if (!imageInput2.value && !imageBase64_2.value) newAsset.image2 = tempAssets[index].image2;
+            tempAssets[index] = newAsset;
+        } else {
+            tempAssets.push(newAsset);
+        }
+
+        try {
+            localStorage.setItem('assets', JSON.stringify(tempAssets));
+            assets = tempAssets; 
+            document.getElementById('formTitle').innerText = "Register Asset";
+            assetForm.reset(); 
+            document.getElementById('assetId').value = '';
+            imageBase64.value = '';
+            imageBase64_2.value = '';
+            formPreview1.style.display = 'none';
+            formPreview2.style.display = 'none';
+            renderTables();
+            populateAssignDropdown();
+            renderBranchAssetsDetailTable();
+            switchNav('panel-dashboard', document.querySelectorAll('.sidebar .nav-link')[0]);
+        } catch (error) {
+            alert("Storage limit reached. Download a backup and clear some records.");
+        }
+    });
+
+    assignAssetForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const selectedTag = assignAssetSelect.value;
+        const assignee = document.getElementById('assignAssigneeName').value.trim();
+        const issueDate = document.getElementById('assignIssueDate').value;
+        const branch = assignBranchList.value || 'Unassigned';
+
+        if (!selectedTag) {
+            alert("Please select an available asset to assign.");
+            return;
+        }
+
+        const activeTags = getActiveAssignedTags();
+        if (activeTags.has(selectedTag)) {
+            alert("This asset is already assigned to someone and has not been returned yet.");
+            return;
+        }
+
+        const masterAsset = assets.find(a => a.tagName === selectedTag);
+        if (!masterAsset) {
+            alert("Asset not found in registry.");
+            return;
+        }
+
+        const newAssignment = {
+            id: 'asg_' + Date.now().toString(),
+            tagId: masterAsset.tagName,
+            productName: masterAsset.productName,
+            serialNumber: masterAsset.serialNumber,
+            vendor: masterAsset.vendor,
+            buyDate: masterAsset.buyDate,
+            warrantyDate: masterAsset.warrantyDate,
+            image: masterAsset.image,
+            image2: masterAsset.image2,
+            categoryList: branch,
+            assigneeName: assignee,
+            issueDate: issueDate,
+            returnDate: ''
+        };
+
+        assignments.unshift(newAssignment);
+        localStorage.setItem('assignments', JSON.stringify(assignments));
+        assignAssetForm.reset();
+        populateAssignDropdown();
+        renderTables();
+        renderBranchAssetsDetailTable();
+        alert(`Asset "${masterAsset.productName}" assigned to ${assignee}!`);
+        switchNav('panel-inventory', document.querySelectorAll('.sidebar .nav-link')[1]);
+    });
+
+    window.openRepairModal = function(assetId) {
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+        document.getElementById('repairAssetId').value = assetId;
+        document.getElementById('repairModalTitle').innerText = `Service Log: ${asset.productName}`;
+        document.getElementById('repairForm').reset();
+        repairBillBase64.value = '';
+        repairBillPreview.style.display = 'none';
+        renderRepairHistory(asset);
+        document.getElementById('repairModal').style.display = 'flex';
+    };
+
+    window.closeRepairModal = function() {
+        document.getElementById('repairModal').style.display = 'none';
+    };
+
+    function renderRepairHistory(asset) {
+        const historyContainer = document.getElementById('repairHistoryList');
+        const repairs = asset.repairs || [];
+        if (repairs.length === 0) {
+            historyContainer.innerHTML = '<p style="color:#636f83; font-size:13px;">No past services found.</p>';
+            return;
+        }
+
+        let html = '<table style="font-size:12.5px; width:100%;"><thead><tr><th>Date</th><th>Cost</th><th>Details</th><th>Bill</th><th></th></tr></thead><tbody>';
+        repairs.forEach((rep, idx) => {
+            const billImg = rep.bill ? `<img src="${rep.bill}" style="width:34px; height:34px; object-fit:cover; border-radius:4px; cursor:zoom-in;" onclick="openImageZoom('${rep.bill}')">` : '-';
+            html += `
+                <tr>
+                    <td>${rep.date}</td>
+                    <td><strong>₹${rep.cost}</strong></td>
+                    <td>${rep.desc}</td>
+                    <td>${billImg}</td>
+                    <td><button type="button" class="btn btn-danger btn-sm" onclick="deleteRepairRecord('${asset.id}', ${idx})">×</button></td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        historyContainer.innerHTML = html;
+    }
+
+    document.getElementById('repairForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const assetId = document.getElementById('repairAssetId').value;
+        const asset = assets.find(a => a.id === assetId);
+        if (!asset) return;
+
+        if (!asset.repairs) asset.repairs = [];
+        asset.repairs.push({
+            date: document.getElementById('repairDate').value,
+            cost: document.getElementById('repairCost').value,
+            desc: document.getElementById('repairDesc').value,
+            bill: repairBillBase64.value || ''
+        });
+
+        localStorage.setItem('assets', JSON.stringify(assets));
+        renderRepairHistory(asset);
+        renderTables();
+        document.getElementById('repairForm').reset();
+        repairBillBase64.value = '';
+        repairBillPreview.style.display = 'none';
+    });
+
+    window.deleteRepairRecord = function(assetId, repairIdx) {
+        const asset = assets.find(a => a.id === assetId);
+        if (asset && asset.repairs && confirm("Delete service record?")) {
+            asset.repairs.splice(repairIdx, 1);
+            localStorage.setItem('assets', JSON.stringify(assets));
+            renderRepairHistory(asset);
+            renderTables();
+        }
+    };
+
+    function renderBranchAssetsDetailTable() {
+        if (!branchAssetsTableBody) return;
+        branchAssetsTableBody.innerHTML = '';
+
+        const selectedBranch = selectedBranchDetail;
+        const q = currentGlobalQuery;
+
+        const activeCustodyMap = new Map();
+        assignments.forEach(asg => {
+            if (!asg.returnDate || asg.returnDate === '') {
+                activeCustodyMap.set(asg.tagId, asg);
+            }
+        });
+
+        const filtered = assets.filter(asset => {
+            const activeAsg = activeCustodyMap.get(asset.tagName);
+            if (!activeAsg) return false;
+            
+            const assetBranch = activeAsg.categoryList || 'Unassigned';
+            const matchesBranch = (selectedBranch === 'ALL') || (assetBranch === selectedBranch);
+            if (!matchesBranch) return false;
+
+            if (!q) return true;
+            return (asset.productName && asset.productName.toLowerCase().includes(q)) ||
+                   (asset.tagName && asset.tagName.toLowerCase().includes(q)) ||
+                   (asset.serialNumber && asset.serialNumber.toLowerCase().includes(q)) ||
+                   (asset.vendor && asset.vendor.toLowerCase().includes(q)) ||
+                   (activeAsg && activeAsg.assigneeName && activeAsg.assigneeName.toLowerCase().includes(q)) ||
+                   (assetBranch.toLowerCase().includes(q));
+        });
+
+        const badgeCount = document.getElementById('branchAssetCountBadge');
+        if (badgeCount) badgeCount.innerText = `${filtered.length} Asset(s) Located`;
+
+        filtered.forEach(asset => {
+            const activeAsg = activeCustodyMap.get(asset.tagName);
+            const assetBranch = activeAsg.categoryList || 'Unassigned';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><img src="${asset.image}" class="product-img" alt="Product" onclick="openImageZoom('${asset.image}')"></td>
+                <td><strong>${asset.productName}</strong><br><small style="color:#636f83;">Assignee: <strong>${activeAsg.assigneeName}</strong></small></td>
+                <td><code>${asset.tagName}</code></td>
+                <td>${asset.serialNumber || 'N/A'}</td>
+                <td><span class="category-chip" style="font-size:11px;">${assetBranch}</span></td>
+                <td>${asset.vendor || 'N/A'}</td>
+                <td>${asset.buyDate || 'N/A'}</td>
+                <td>${asset.warrantyDate || 'N/A'}</td>
+            `;
+            branchAssetsTableBody.appendChild(tr);
+        });
+
+        if (filtered.length === 0) {
+            branchAssetsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color:#636f83;">No asset records found for branch "${selectedBranch}".</td></tr>`;
+        }
+
+        const badgeNav = document.getElementById('badgeBranchAssets');
+        if (badgeNav) badgeNav.innerText = activeCustodyMap.size;
+    }
+
+    window.printBranchAssetDetailSection = function() {
+        const selectedBranch = selectedBranchDetail;
+        let tableRows = '';
+        let counter = 1;
+
+        const activeCustodyMap = new Map();
+        assignments.forEach(asg => {
+            if (!asg.returnDate || asg.returnDate === '') {
+                activeCustodyMap.set(asg.tagId, asg);
+            }
+        });
+
+        assets.forEach(asset => {
+            const activeAsg = activeCustodyMap.get(asset.tagName);
+            if (!activeAsg) return;
+            
+            const assetBranch = activeAsg.categoryList || 'Unassigned';
+            const matchesBranch = (selectedBranch === 'ALL') || (assetBranch === selectedBranch);
+            if (matchesBranch) {
+                const serialNum = String(counter).padStart(3, '0');
+                tableRows += `
+                    <tr>
+                        <td style="text-align: center;"><strong>${serialNum}</strong></td>
+                        <td style="text-align: center;"><img src="${asset.image}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;"></td>
+                        <td><strong>${asset.productName}</strong><br><small>Assignee: ${activeAsg.assigneeName}</small></td>
+                        <td>${asset.tagName}</td>
+                        <td>${asset.serialNumber || 'N/A'}</td>
+                        <td>${assetBranch}</td>
+                        <td>${asset.vendor || 'N/A'}</td>
+                        <td>${asset.buyDate || 'N/A'}</td>
+                        <td>${asset.warrantyDate || 'N/A'}</td>
+                    </tr>
+                `;
+                counter++;
+            }
+        });
+
+         const printHTML = `
+         <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Branch Asset Detail Report - ${selectedBranch}</title>
+                <style>
+                    body { font-family: 'Public Sans', Arial, sans-serif; padding: 24px; font-size: 13px; color: #3c4b64; }
+                    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #2f3542; padding-bottom: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+                    th, td { border: 1px solid #d8dbe0; padding: 10px; text-align: left; }
+                    th { background-color: #f0f2f5; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+                </style>
+            </head>
+            <body onload="window.print();">
+                <div class="header">
+                    <h1 style="margin: 0; font-size: 22px;">Branch Asset Detail Register (${selectedBranch})</h1>
+                    <p style="color: #636f83; margin: 4px 0 0 0;">Generated: ${new Date().toLocaleString()}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th>
+                            <th>Preview</th>
+                            <th>Product Details</th>
+                            <th>Tag ID</th>
+                            <th>Serial No.</th>
+                            <th>Branch / Unit</th>
+                            <th>Supplier</th>
+                            <th>Purchase</th>
+                            <th>Warranty</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows || '<tr><td colspan="9" style="text-align:center;">No asset records found for this branch.</td></tr>'}</tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        executeCleanPrint(printHTML);
+    };
+
+    function renderTables() {
+        tableBody.innerHTML = '';
+        specsTableBody.innerHTML = '';
+        dashboardQuickTable.innerHTML = '';
+
+        let totalRepairExpenses = 0;
+        assets.forEach(a => {
+            if (a.repairs) {
+                a.repairs.forEach(r => totalRepairExpenses += parseFloat(r.cost || 0));
+            }
+        });
+
+        const activeCustodyMap = new Map();
+        assignments.forEach(asg => {
+            if (!asg.returnDate || asg.returnDate === '') {
+                activeCustodyMap.set(asg.tagId, asg);
+            }
+        });
+
+        const q = currentGlobalQuery;
+        const selectedInventoryBranch = printListSelect ? printListSelect.value : 'ALL';
+        const statusFilter = document.getElementById('inventoryStatusFilter') ? document.getElementById('inventoryStatusFilter').value : 'ALL';
+
+        // 1. Inventory Table
+        if (statusFilter === 'ALL' || statusFilter === 'ACTIVE') {
+            const filteredAssignments = assignments.filter(asg => {
+                const isReturned = asg.returnDate && asg.returnDate !== '';
+                if (statusFilter === 'ACTIVE' && isReturned) return false;
+
+                const matchesBranch = (!selectedInventoryBranch || selectedInventoryBranch === 'ALL') || 
+                                      (asg.categoryList === selectedInventoryBranch);
+                if (!matchesBranch) return false;
+
+                if (!q) return true;
+                return (asg.productName && asg.productName.toLowerCase().includes(q)) ||
+                       (asg.tagId && asg.tagId.toLowerCase().includes(q)) ||
+                       (asg.serialNumber && asg.serialNumber.toLowerCase().includes(q)) ||
+                       (asg.assigneeName && asg.assigneeName.toLowerCase().includes(q)) ||
+                       (asg.categoryList && asg.categoryList.toLowerCase().includes(q)) ||
+                       (asg.vendor && asg.vendor.toLowerCase().includes(q));
+            });
+
+            filteredAssignments.forEach(asg => {
+                const isReturned = asg.returnDate && asg.returnDate !== '';
+                const tr = document.createElement('tr');
+                let statusBadge = isReturned 
+                    ? `<span class="badge badge-warning">Returned (${asg.returnDate})</span>`
+                    : `<span class="badge badge-info">Active Custody</span>`;
+
+                let actionButtons = `<button type="button" class="btn btn-outline btn-sm" onclick="printSingleTicket('${asg.id}')">🖨️ Ticket</button>`;
+                actionButtons += ` <button type="button" class="btn btn-warning btn-sm" onclick="printBarcodeSticker('${asg.tagId}')">🏷️ Barcode</button>`;
+                
+                if (!isReturned) {
+                    actionButtons += ` <button type="button" class="btn btn-success btn-sm" onclick="returnAssignment('${asg.id}')">Return</button>`;
+                    actionButtons += ` <button type="button" class="btn btn-primary btn-sm" disabled title="Product is currently assigned">Assign Again</button>`;
+                    actionButtons += ` <button type="button" class="btn btn-danger btn-sm" disabled onclick="deleteAssignmentRecord('${asg.id}')">Delete</button>`;
+                } else {
+                    actionButtons += ` <button type="button" class="btn btn-primary btn-sm" onclick="assignAgain('${asg.tagId}')">Assign Again</button>`;
+                    actionButtons += ` <button type="button" class="btn btn-danger btn-sm" onclick="deleteAssignmentRecord('${asg.id}')">Delete</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td><img src="${asg.image}" class="product-img" alt="Product" onclick="openImageZoom('${asg.image}')"></td>
+                    <td>
+                        <strong>${asg.productName}</strong><br>
+                        <small style="color:#636f83;">Tag: ${asg.tagId} | S/N: ${asg.serialNumber}</small>
+                    </td>
+                    <td><strong>${asg.assigneeName}</strong><br><small style="color:#636f83;">Branch: ${asg.categoryList || 'Unassigned'}</small></td>
+                    <td>${asg.issueDate}</td>
+                    <td>${statusBadge}</td>
+                    <td><div style="display:flex; gap:4px; flex-wrap:wrap;">${actionButtons}</div></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        } 
+        
+        
+
+        if (tableBody.children.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:#636f83;">No records found matching criteria.</td></tr>`;
+        }
+
+        // 2. Filter Master Assets
+        const filteredAssets = assets.filter(asset => {
+            if (!q) return true;
+            return (asset.productName && asset.productName.toLowerCase().includes(q)) ||
+                   (asset.tagName && asset.tagName.toLowerCase().includes(q)) ||
+                   (asset.serialNumber && asset.serialNumber.toLowerCase().includes(q)) ||
+                   (asset.vendor && asset.vendor.toLowerCase().includes(q));
+        });
+
+        filteredAssets.forEach(asset => {
+            const img2 = asset.image2 || 'https://via.placeholder.com/150?text=No+Img2';
+            const repairsCount = (asset.repairs && asset.repairs.length) ? asset.repairs.length : 0;
+            
+            const trSpec = document.createElement('tr');
+            trSpec.innerHTML = `
+                <td><img src="${asset.image}" class="product-img" alt="Img 1" onclick="openImageZoom('${asset.image}')"></td>
+                <td><img src="${img2}" class="product-img" alt="Img 2" onclick="openImageZoom('${img2}')"></td>
+                <td><strong>${asset.productName}</strong></td>
+                <td><code>${asset.tagName}</code></td>
+                <td>${asset.serialNumber || 'N/A'}</td>
+                <td>${asset.vendor}</td>
+                <td>${asset.buyDate}</td>
+                <td>${asset.warrantyDate}</td>
+                <td><button type="button" class="btn btn-outline btn-sm" onclick="openRepairModal('${asset.id}')">🔧 ${repairsCount} Service(s)</button></td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-warning btn-sm" onclick="printBarcodeSticker('${asset.tagName}')">🏷️ Barcode</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="editAsset('${asset.id}')">Edit</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteAsset('${asset.id}')">Delete</button>
+                    </div>
+                </td>
+            `;
+            specsTableBody.appendChild(trSpec);
+        });
+
+        if (filteredAssets.length === 0) {
+            specsTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color:#636f83;">${q ? 'No matching specifications found for "' + q + '".' : 'No master assets registered.'}</td></tr>`;
+        }
+
+        // 3. Quick Dashboard Overview (Filtered)
+        const dashFilter = document.getElementById('dashboardStatusFilter') ? document.getElementById('dashboardStatusFilter').value : 'ALL';
+        const dashFilteredAssets = filteredAssets.filter(asset => {
+            const isActive = activeCustodyMap.has(asset.tagName);
+            if (dashFilter === 'ACTIVE' && !isActive) return false;
+            if (dashFilter === 'INSTOCK' && isActive) return false;
+            return true;
+        });
+
+        dashFilteredAssets.forEach(asset => {
+            const activeAsg = activeCustodyMap.get(asset.tagName);
+            const statusHtml = activeAsg 
+                ? `<span class="badge badge-info">Assigned (${activeAsg.assigneeName})</span>`
+                : `<span class="badge badge-success">In Stock</span>`;
+
+            const trQuick = document.createElement('tr');
+            trQuick.innerHTML = `
+                <td><img src="${asset.image}" class="product-img" style="width:36px; height:36px;" onclick="openImageZoom('${asset.image}')"></td>
+                <td><strong>${asset.productName}</strong></td>
+                <td><code>${asset.tagName}</code></td>
+                <td>${asset.serialNumber || 'N/A'}</td>
+                <td>${asset.vendor}</td>
+                <td>${asset.warrantyDate}</td>
+                <td>${statusHtml}</td>
+            `;
+            dashboardQuickTable.appendChild(trQuick);
+        });
+
+        if (dashFilteredAssets.length === 0) {
+            dashboardQuickTable.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 18px; color:#636f83;">No assets found matching criteria.</td></tr>`;
+        }
+
+        // 4. Header Metrics Cards
+        const activeAssignedCount = activeCustodyMap.size;
+        const inStockCount = Math.max(0, assets.length - activeAssignedCount);
+
+        document.getElementById('statTotalAssets').innerText = assets.length;
+        document.getElementById('statAssigned').innerText = activeAssignedCount;
+        document.getElementById('statInStock').innerText = inStockCount;
+        document.getElementById('statRepairs').innerText = `₹${totalRepairExpenses.toLocaleString()}`;
+
+        document.getElementById('badgeInventory').innerText = assignments.length;
+        document.getElementById('badgeSpecs').innerText = assets.length;
+    }
+
+    window.assignAgain = function(tagId) {
+        populateAssignDropdown(tagId);
+        switchNav('panel-assign', document.querySelectorAll('.sidebar .nav-link')[5]);
+        const selectElem = document.getElementById('assignAssetSelect');
+        if (selectElem) {
+            selectElem.value = tagId;
+            selectElem.focus();
+            selectElem.classList.add('highlight-field');
+            selectElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => selectElem.classList.remove('highlight-field'), 2000);
+        }
+    };
+
+    window.returnAssignment = function(assignmentId) {
+        const asg = assignments.find(a => a.id === assignmentId);
+        if (asg) {
+            asg.returnDate = new Date().toISOString().split('T')[0];
+            localStorage.setItem('assignments', JSON.stringify(assignments));
+            renderTables();
+            populateAssignDropdown();
+            renderBranchAssetsDetailTable();
+            alert(`Asset "${asg.productName}" (Tag: ${asg.tagId}) checked out and returned to In Stock!`);
+        }
+    };
+
+    window.deleteAssignmentRecord = function(assignmentId) {
+        if (confirm("Delete this assignment transaction?")) {
+            assignments = assignments.filter(a => a.id !== assignmentId);
+            localStorage.setItem('assignments', JSON.stringify(assignments));
+            renderTables();
+            populateAssignDropdown();
+            renderBranchAssetsDetailTable();
+        }
+    };
+
+    window.editAsset = function(id) {
+        const asset = assets.find(a => a.id === id);
+        if (asset) {
+            document.getElementById('assetId').value = asset.id;
+            document.getElementById('productName').value = asset.productName;
+            document.getElementById('tagName').value = asset.tagName;
+            document.getElementById('serialNumber').value = asset.serialNumber || '';
+            document.getElementById('vendor').value = asset.vendor;
+            document.getElementById('buyDate').value = asset.buyDate;
+            document.getElementById('warrantyDate').value = asset.warrantyDate;
+            document.getElementById('imageBase64').value = asset.image || '';
+            document.getElementById('imageBase64_2').value = asset.image2 || '';
+
+            if (asset.image && !asset.image.includes('placeholder')) {
+                formPreview1.src = asset.image;
+                formPreview1.style.display = 'block';
+            } else {
+                formPreview1.style.display = 'none';
+            }
+
+            if (asset.image2 && !asset.image2.includes('placeholder')) {
+                formPreview2.src = asset.image2;
+                formPreview2.style.display = 'block';
+            } else {
+                formPreview2.style.display = 'none';
+            }
+            
+            document.getElementById('formTitle').innerText = "Edit Registered Asset";
+            switchNav('panel-register', document.querySelectorAll('.sidebar .nav-link')[4]);
+        }
+    };
+
+    window.deleteAsset = function(id) {
+        const asset = assets.find(a => a.id === id);
+        if (asset && confirm(`Delete asset "${asset.productName}" (Tag: ${asset.tagName})?`)) {
+            assets = assets.filter(a => a.id !== id);
+            localStorage.setItem('assets', JSON.stringify(assets));
+            renderTables();
+            populateAssignDropdown();
+            renderBranchAssetsDetailTable();
+        }
+    };
+
+    window.printBarcodeSticker = function(tagId) {
+        const asset = assets.find(a => a.tagName === tagId) || assignments.find(a => a.tagId === tagId);
+        if (!asset) {
+            alert("Asset details could not be found for barcode generation.");
+            return;
+        }
+
+        const assetTag = asset.tagName || asset.tagId;
+        const productName = asset.productName || 'Asset Item';
+        const serialNo = asset.serialNumber || 'N/A';
+        const callname = asset.calname || 'Please Call +91 123456789 If found'
+
+        const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        try {
+            JsBarcode(tempSvg, assetTag, {
+                format: "CODE128",
+                lineColor: "#000000",
+                width: 1.8,
+                height: 48,
+                displayValue: false,
+                fontSize: 12,
+                font: "Public Sans, monospace",
+                textMargin: 3,
+                margin: 0
+            });
+        } catch (e) {
+            alert("Error generating barcode for tag: " + assetTag);
+            return;
+        }
+
+        const barcodeSvgHtml = new XMLSerializer().serializeToString(tempSvg);
+        
+
+        const printHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Barcode Label - ${assetTag}</title>
+                <style>
+                    @page { size: 50mm 30mm; margin: 0; }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: 'Public Sans', -apple-system, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background: #ffffff;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .sticker-wrapper {
+                        width: 50mm;
+                        height: 30mm;
+                        padding: 2.2mm 2.5mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        align-items: center;
+                        border: 1px dashed #cbd5e1;
+                        background: #ffffff;
+                        text-align: center;
+                    }
+                    .sticker-header {
+                        font-size: 8px;
+                        font-weight: 200;
+                        letter-spacing: 0.4px;
+                        color: #1e293b;
+                        text-transform: uppercase;
+                        margin: 0;
+                        width: 100%;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        border-bottom: 0.5px solid #e2e8f0;
+                        padding-bottom: 1.5px;
+                    }
+                    .sticker-info { width: 100%; margin-top: 1.5px; }
+                    .tagname, .callname { font-size: 7px; color: #64748b; margin: 0; }
+                    .barcode-box { width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 1px; }
+                    @media print {
+                        body { min-height: auto; }
+                        .sticker-wrapper { border: none; page-break-inside: avoid; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="sticker-wrapper">
+                    <div class="sticker-header">Asset Management</div>
+                    <div class="sticker-info">
+                        <div class="tagname">${assetTag}</div>
+                        <div class="callname">${callname}</div>
+                    </div>
+                    <div class="barcode-box">${barcodeSvgHtml}</div>
+                </div>
+            </body>
+            </html>
+        `;
+        executeCleanPrint(printHTML);
+    };
+
+    window.printSingleTicket = function(assignmentId) {
+        const asgIndex = assignments.findIndex(a => a.id === assignmentId);
+        if (asgIndex === -1) return;
+        const asg = assignments[asgIndex];
+        const ticketNum = String(assignments.length - asgIndex).padStart(3, '0');
+        const returnStatus = asg.returnDate ? asg.returnDate : 'Pending / Active Custody';
+        
+        
+        const printHTML = `
+            <html>
+            <head>
+                <title>Custody Ticket - ${asg.tagId}</title>
+                <style>
+                    body { font-family: 'Public Sans', Arial, sans-serif; padding: 32px; color: #3c4b64; }
+                    .ticket { border: 2px solid #2f3542; padding: 32px; border-radius: 8px; max-width: 620px; margin: 0 auto; }
+                    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d8dbe0; padding-bottom: 16px; margin-bottom: 20px; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                    .field label { display: block; font-size: 11px; text-transform: uppercase; color: #636f83; font-weight: 700; }
+                    .field div { font-size: 15px; font-weight: 700; margin-top: 2px; }
+                    .preview-img { width: 85px; height: 85px; object-fit: cover; border-radius: 4px; border: 1px solid #d8dbe0; }
+                </style>
+            </head>
+            <body>
+                <div class="ticket">
+                    <div class="header">
+                        <div>
+                            <h2 style="margin: 0; font-size: 20px; color: #2f3542;">Asset Handover Record</h2>
+                            <div style="font-size: 14px; font-weight: bold; color: #e55353; margin-top: 6px;">Ticket No: ${ticketNum}</div>
+                        </div>
+                        <img src="${asg.image}" class="preview-img" alt="Img 1">
+                    </div>
+                    <div class="grid">
+                        <div class="field"><label>Product Title</label><div>${asg.productName}</div>
+                        <p style="margin: 4px 0 0 0; color: #636f83;">Tag ID: ${asg.tagId} | S/N: ${asg.serialNumber || 'N/A'}</p></div>
+                        <div class="field"><label>Branch / Unit</label><div>${asg.categoryList || 'Unassigned'}</div></div>
+                    </div>
+                    <hr style="border:none; border-top:1px dashed #d8dbe0; margin: 18px 0;">
+                    <div class="grid">
+                        <div class="field"><label>Assigned Recipient</label><div>${asg.assigneeName}</div></div>
+                        <div class="field"><label>Assigned Date</label><div>${asg.issueDate}</div></div>
+                        <div class="field"><label>Check-in / Return Date</label><div>${returnStatus}</div></div>
+                    </div>
+                    <div style="margin-top: 45px; display: flex; justify-content: space-between;">
+                        <div style="border-top: 1.5px solid #2f3542; width: 44%; text-align: center; padding-top: 8px; font-size: 13px; font-weight: 700;">Issuing Officer</div>
+                        <div style="border-top: 1.5px solid #2f3542; width: 44%; text-align: center; padding-top: 8px; font-size: 13px; font-weight: 700;">Recipient Signature</div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+        executeCleanPrint(printHTML);
+    };
+
+    window.printSpecsSection = function() {
+        let tableRows = '';
+        let counter = 1;
+        assets.forEach(asset => {
+            const img2Fallback = asset.image2 || 'https://via.placeholder.com/150?text=No+Img2';
+            let repairLogText = '';
+            if (asset.repairs && asset.repairs.length > 0) {
+                repairLogText = '<ul style="margin:0; padding-left:14px; font-size:11px;">';
+                asset.repairs.forEach(r => {
+                    const billTag = r.bill ? `<br><img src="${r.bill}" style="width:38px; height:38px; object-fit:cover; border:1px solid #ccc; margin-top:2px;">` : '';
+                    repairLogText += `<li style="margin-bottom:6px;"><strong>${r.date}</strong> (₹${r.cost}): ${r.desc}${billTag}</li>`;
+                });
+                repairLogText += '</ul>';
+            } else {
+                repairLogText = '<span style="color:#777; font-size:11px;">None</span>';
+            }
+
+            const serialNum = String(counter).padStart(3, '0');
+            tableRows += `
+                <tr>
+                   <td style="text-align: center;"><strong>${serialNum}</strong></td>
+                    <td style="text-align: center;"><img src="${asset.image}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;"></td>
+                    <td style="text-align: center;"><img src="${img2Fallback}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;"></td>
+                    <td><strong>${asset.productName}</strong></td>
+                    <td>${asset.tagName}</td>
+                    <td>${asset.serialNumber || 'N/A'}</td>
+                    <td>${asset.vendor}</td>
+                    <td>${asset.buyDate}</td>
+                    <td>${asset.warrantyDate}</td>
+                </tr>
+            `;
+            counter++;
+        });
+
+        const printHTML = `
+        <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Equipment Specification Ledger</title>
+                <style>
+                    body { font-family: 'Public Sans', Arial, sans-serif; padding: 24px; font-size: 13px; color: #3c4b64; }
+                    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #2f3542; padding-bottom: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+                    th, td { border: 1px solid #d8dbe0; padding: 10px; text-align: left; vertical-align: top; }
+                    th { background-color: #f0f2f5; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1 style="margin: 0; font-size: 22px;">Equipment Specs & Maintenance Ledger</h1>
+                    <p style="color: #636f83; margin: 4px 0 0 0;">Generated: ${new Date().toLocaleString()}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sl. No.</th><th>Img 1</th><th>Img 2</th><th>Product Name</th><th>Tag</th><th>S/N</th><th>Vendor</th><th>Purchased</th><th>Warranty</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows || '<tr><td colspan="9" style="text-align:center;">No assets recorded.</td></tr>'}</tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        executeCleanPrint(printHTML);
+    };
+
+    window.printSelectedList = function() {
+        const selectedBranch = document.getElementById('printListSelect').value;
+        const statusFilter = document.getElementById('inventoryStatusFilter') ? document.getElementById('inventoryStatusFilter').value : 'ALL';
+        
+        let tableRows = '';
+        let counter = 1;
+
+        if (statusFilter === 'ALL' || statusFilter === 'ACTIVE') {
+            assignments.forEach(asg => {
+                const isReturned = asg.returnDate && asg.returnDate !== '';
+                if (statusFilter === 'ACTIVE' && isReturned) return;
+                
+                const matchesBranch = (selectedBranch === 'ALL') || (asg.categoryList === selectedBranch);
+                if (matchesBranch) {
+                    const statusInfo = isReturned ? `Returned (${asg.returnDate})` : `Active Custody`;
+                    const serialNum = String(counter).padStart(3, '0');
+                    tableRows += `
+                        <tr>
+                            <td style="text-align: center;"><strong>${serialNum}</strong></td>
+                            <td style="text-align: center;"><img src="${asg.image}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;"></td>
+                            <td><strong>${asg.productName}</strong><br><small>Tag: ${asg.tagId} | S/N: ${asg.serialNumber || 'N/A'}</small></td>
+                            <td><strong>${asg.assigneeName}</strong> (${asg.categoryList || 'Unassigned'})</td>
+                            <td>${asg.issueDate}</td>
+                            <td>${statusInfo}</td>
+                        </tr>
+                    `;
+                    counter++;
+                }
+            });
+        } 
+        
+        if (statusFilter === 'INSTOCK') {
+            const activeCustodyMap = new Map();
+            assignments.forEach(asg => {
+                if (!asg.returnDate || asg.returnDate === '') {
+                    activeCustodyMap.set(asg.tagId, asg);
+                }
+            });
+
+            assets.forEach(asset => {
+                if (activeCustodyMap.has(asset.tagName)) return;
+                if (selectedBranch !== 'ALL' && selectedBranch !== 'Unassigned') return;
+
+                const serialNum = String(counter).padStart(3, '0');
+                tableRows += `
+                    <tr>
+                        <td style="text-align: center;"><strong>${serialNum}</strong></td>
+                        <td style="text-align: center;"><img src="${asset.image}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;"></td>
+                        <td><strong>${asset.productName}</strong><br><small>Tag: ${asset.tagName} | S/N: ${asset.serialNumber || 'N/A'}</small></td>
+                        <td><strong>-</strong> (Unassigned)</td>
+                        <td>-</td>
+                        <td>In Stock</td>
+                    </tr>
+                `;
+                counter++;
+            });
+        }
+
+       
+        const filterTitleText = statusFilter === 'ACTIVE' ? ' (Active Custody)' : (statusFilter === 'INSTOCK' ? ' (In Stock)' : '');
+        
+        const printHTML = `
+        <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Asset Custody Ledger</title>
+                <style>
+                    body { font-family: 'Public Sans', Arial, sans-serif; padding: 24px; font-size: 13px; color: #3c4b64; }
+                    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #2f3542; padding-bottom: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+                    th, td { border: 1px solid #d8dbe0; padding: 10px; text-align: left; }
+                    th { background-color: #f0f2f5; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1 style="margin: 0; font-size: 22px;">Inventory Register: ${selectedBranch}${filterTitleText}</h1>
+                    <p style="color: #636f83; margin: 4px 0 0 0;">Generated: ${new Date().toLocaleString()}</p>
+                </div>
+                <table>
+                    <thead><tr><th>Sl. No.</th><th>Preview</th><th>Product Name</th><th>Assignee</th><th>Issued Date</th><th>Status</th></tr></thead>
+                    <tbody>${tableRows || '<tr><td colspan="6" style="text-align:center;">No records found.</td></tr>'}</tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        executeCleanPrint(printHTML);
+    };
+
+    renderCategoryDropdowns();
+    renderTables();
+    populateAssignDropdown();
+    renderBranchAssetsDetailTable();
+</script>
+</body>
+</html>
